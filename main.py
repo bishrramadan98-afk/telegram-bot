@@ -7,8 +7,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import timezone
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+TOKEN = "8812103720:AAFgQvhz5WQOEiLRi7n2G3N0iKAAAGudEZg"  # التوكن الخاص بك بين علامتين تنصيص
 
-TOKEN ="8812103720:AAFgQvhz5WQOEiLRi7n2G3N0iKAAAGudEZg" 
 FILE_PATH = "todays_users.json"
 TIMEZONE = timezone("Asia/Riyadh") # غيرها لمدينتك إذا بدك
 
