@@ -1,30 +1,29 @@
 import json
 import os
 import logging
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import threading
 from telegram import Update
 from telegram.ext import Application, MessageHandler, CommandHandler, filters, ContextTypes
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import timezone
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 TOKEN = "8812103720:AAFgQvhz5WQOEiLRi7n2G3N0iKAAAGudEZg" # حطي التوكن تبعك هون
 FILE_PATH = "todays_users.json"
-TIMEZONE = timezone("Asia/Riyadh")
+TIMEZONE = timezone("Asia/Riyadh") # توقيت دمشق ومكة
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-# سيرفر وهمي لإرضاء موقع Render
+# سيرفر وهمي لتأمين استقرار السيرفر على Railway
 class WebServer(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"Bot is alive!")
+        self.wfile.write(b"Bot is active and running!")
 
 def run_web_server():
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(('0.0.0.0', port), WebServer)
-    server.serve_forever()
+    port = int(os.environ.get("PORT", 8080))
+    HTTPServer(('0.0.0.0', port), WebServer).serve_forever()
 
 def load_users():
     if not os.path.exists(FILE_PATH): return []
@@ -55,12 +54,13 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def reset_daily_list():
     save_users([])
+    print("تم تصفير القائمة اليومية تلقائياً.")
 
 def main():
-    # تشغيل السيرفر الوهمي في الخلفية
     threading.Thread(target=run_web_server, daemon=True).start()
 
     application = Application.builder().token(TOKEN).build()
+    
     scheduler = BackgroundScheduler(timezone=TIMEZONE)
     scheduler.add_job(reset_daily_list, 'cron', hour=6, minute=0)
     scheduler.start()
@@ -68,7 +68,7 @@ def main():
     application.add_handler(CommandHandler("list", show_list))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_user))
     
-    print("Bot is starting...")
+    print("Bot is starting on Railway...")
     application.run_polling(close_loop=False)
 
 if __name__ == "__main__":
