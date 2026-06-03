@@ -6,11 +6,13 @@ from telegram.ext import Application, MessageHandler, CommandHandler, filters, C
 from apscheduler.schedulers.background import BackgroundScheduler
 from pytz import timezone
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
-TOKEN = "8812103720:AAFgQvhz5WQOEiLRi7n2G3N0iKAAAGudEZg"  # التوكن الخاص بك بين علامتين تنصيص
+# 1. ضع التوكن الخاص بك هنا بدلاً من الأرقام الوهمية
+TOKEN = "8812103720:AAFgQvhz5WQOEiLRi7n2G3N0iKAAAGudEZg" 
 
 FILE_PATH = "todays_users.json"
-TIMEZONE = timezone("Asia/Riyadh") # غيرها لمدينتك إذا بدك
+TIMEZONE = timezone("Asia/Riyadh") # يمكنك تغيير المدينة حسب توقيتك
+
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 def load_users():
     if not os.path.exists(FILE_PATH): return []
@@ -36,23 +38,28 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not users:
         await update.message.reply_text("القائمة فارغة حالياً.")
         return
-    response = "📋 الأشخاص الذين أرسلوا اليوم:\n\n" + "\n".join(f"- {user}" for user in users)
+    response = "📋 **الأشخاص الذين أرسلوا اليوم:**\n\n" + "\n".join(f"- {user}" for user in users)
     await update.message.reply_text(response, parse_mode="Markdown")
 
 def reset_daily_list():
     save_users([])
 
 def main():
+    # بناء التطبيق وتثبيت الإعدادات
     application = Application.builder().token(TOKEN).build()
+    
+    # تشغيل المنبه اليومي للساعة 6 صباحاً
     scheduler = BackgroundScheduler(timezone=TIMEZONE)
     scheduler.add_job(reset_daily_list, 'cron', hour=6, minute=0)
     scheduler.start()
 
+    # الأوامر والرسائل
     application.add_handler(CommandHandler("list", show_list))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, track_user))
     
-    # لتشغيل البوت على السيرفرات المجانية بشكل مستمر
-    application.run_polling()
+    # بدء الاستماع للرسائل (طريقة متوافقة مع Render)
+    print("Bot is starting...")
+    application.run_polling(close_loop=False)
 
-if name == "main":
+if __name__ == "__main__":
     main()
