@@ -1,18 +1,30 @@
+import os
 import logging
 import sqlite3
 from datetime import datetime
+from flask import Flask
+from threading import Thread
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-# إعداد السجلات لمراقبة عمل البوت
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
-TOKEN = "8812103720:AAGvFnh8pXjJyVLPFvJQk5yQWxCHkbot_pI"
-ADMIN_ID = -1003852568635  # ضع الآيدي الخاص بك هنا ليتم عرض القائمة لك حصراً
+TOKEN = "8812103720:AAGvFnh8pXjJyVLPFvJQk5yQWxCHkbot_pI
+"
+ADMIN_ID = -1003852568635 # ضع آيدي الجروب الخاص بك هنا (مع علامة السالب)
 
-# إنشاء قاعدة بيانات لحفظ الأسماء بدون تكرار
+# ---- خادم ويب وهمي لإرضاء Hugging Face ----
+app = Flask('')
+@app.route('/')
+def home():
+    return "Bot is Running successfully!"
+
+def run_flask():
+    # منفذ 7860 هو المنفذ الافتراضي الذي يبحث عنه Hugging Face
+    app.run(host='0.0.0.0', port=7860)
+
 def init_db():
     conn = sqlite3.connect('bot_users.db')
     cursor = conn.cursor()
@@ -25,7 +37,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# دالة تصفير القائمة تلقائياً الساعة 6 صباحاً
 async def reset_daily_list(context: ContextTypes.DEFAULT_TYPE):
     conn = sqlite3.connect('bot_users.db')
     cursor = conn.cursor()
@@ -35,9 +46,8 @@ async def reset_daily_list(context: ContextTypes.DEFAULT_TYPE):
     try:
         await context.bot.send_message(chat_id=ADMIN_ID, text="🔄 تم إعادة ضبط قائمة الأسماء اليومية بنجاح (الساعة الآن 6:00 AM).")
     except Exception as e:
-        print(f"Error sending message: {e}")
+        print(f"Error: {e}")
 
-# استقبال أي رسالة وتسجيل اسم الشخص
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_id = user.id
@@ -49,13 +59,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cursor.execute('INSERT INTO daily_users (user_id, full_name) VALUES (?, ?)', (user_id, full_name))
         conn.commit()
     except sqlite3.IntegrityError:
-        pass # إذا أرسل الشخص أكثر من رسالة لن يتكرر اسمه في القائمة
+        pass 
     finally:
         conn.close()
 
-# أمر /list للمشرف لرؤية القائمة الحالية
 async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if update.effective_user.id != ADMIN_ID:
+    if update.effective_chat.id != ADMIN_ID:
         return 
 
     conn = sqlite3.connect('bot_users.db')
@@ -76,10 +85,13 @@ async def show_list(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     init_db()
+    
+    # تشغيل خادم الويب في خلفية مستقلة لكي لا يعترض الموقع
+    Thread(target=run_flask).start()
+
     application = Application.builder().token(TOKEN).build()
 
-    # ضبط الجدولة اليومية الساعة 6:00 صباحاً
-    scheduler = AsyncIOScheduler(timezone="Asia/Damascus") # اضبط دمشق أو توقيت بلدك الحالي
+    scheduler = AsyncIOScheduler(timezone="Asia/Damascus")
     scheduler.add_job(
         reset_daily_list,
         CronTrigger(hour=6, minute=0),
